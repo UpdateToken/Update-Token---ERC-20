@@ -1,67 +1,75 @@
 pragma solidity ^0.4.18;
 
-contract SafeMath {
-    function safeAdd(uint d, uint e) public pure returns (uint f) {
-        f = d + e;
-        require(f >= d);
+    /// Name:       Update token
+    /// Symbol:     UTP
+    /// Website:    www.updatetoken.org
+    /// Telegram:   https://t.me/updatetoken
+    /// Twitter:    https://twitter.com/token_update
+    /// Gitgub:     https://github.com/UpdateToken
+
+    contract SafeMath {
+        function safeAdd(uint d, uint e) public pure returns (uint f) {
+            f = d + e;
+            require(f >= d);
+        }
+        function safeSub(uint d, uint e) public pure returns (uint f) {
+            require(e <= d);
+            f = d - e;
+        }
+        function safeMul(uint d, uint e) public pure returns (uint f) {
+            f = d * e;
+            require(d == 0 || f / d == e);
+        }
+        function safeDiv(uint d, uint e) public pure returns (uint f) {
+            require(e > 0);
+            f = d / e;
+        }
     }
-    function safeSub(uint d, uint e) public pure returns (uint f) {
-        require(e <= d);
-        f = d - e;
-    }
-    function safeMul(uint d, uint e) public pure returns (uint f) {
-        f = d * e;
-        require(d == 0 || f / d == e);
-    }
-    function safeDiv(uint d, uint e) public pure returns (uint f) {
-        require(e > 0);
-        f = d / e;
-    }
-}
 
-contract ERC20Interface {
-    function totalSupply() public constant returns (uint);
-    function balanceOf(address tokenOwner) public constant returns (uint balance);
-    function allowance(address tokenOwner, address spender) public constant returns (uint remaining);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function approve(address spender, uint tokens) public returns (bool success);
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
-
-    event Transfer(address indexed from, address indexed to, uint tokens);
-    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
-}
-
-contract ApproveAndCallFallBack {
-    function receiveApproval(address from, uint256 tokens, address token, bytes data) public;
-}
-
-contract Owned {
-    address public owner;
-    address public newOwner;
-
-    event OwnershipTransferred(address indexed _from, address indexed _to);
-
-    function Owned() public {
-        owner = msg.sender; 
-    }
+    contract ERC20Interface {
+        function totalSupply() public constant returns (uint);
+        function balanceOf(address tokenOwner) public constant returns (uint balance);
+        function allowance(address tokenOwner, address spender) public constant returns (uint remaining);
+        function transfer(address to, uint tokens) public returns (bool success);
+        function approve(address spender, uint tokens) public returns (bool success);
+        function transferFrom(address from, address to, uint tokens) public returns (bool success);
     
-    modifier onlyOwner {
-        require(msg.sender == owner);
-        _;
+        event Transfer(address indexed from, address indexed to, uint tokens);
+        event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+        event Burn(address indexed from, uint256 value);
     }
 
-    function transferOwnership(address _newOwner) public onlyOwner {
-        newOwner = _newOwner;
+    contract ApproveAndCallFallBack {
+        function receiveApproval(address from, uint256 tokens, address token, bytes data) public;
     }
-    function acceptOwnership() public {
-        require(msg.sender == newOwner);
-        OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-        newOwner = address(0);
-    }
-}
 
-contract UpdateToken is ERC20Interface, Owned, SafeMath {
+    contract Owned {
+        address public owner;
+        address public newOwner;
+    
+        event OwnershipTransferred(address indexed _from, address indexed _to);
+    
+        function Owned() public {
+            owner = msg.sender; 
+        }
+        
+        modifier onlyOwner {
+            require(msg.sender == owner);
+            _;
+        }
+    
+        function transferOwnership(address _newOwner) public onlyOwner {
+            newOwner = _newOwner;
+        }
+        function acceptOwnership() public {
+            require(msg.sender == newOwner);
+            OwnershipTransferred(owner, newOwner);
+            owner = newOwner;
+            newOwner = address(0);
+        }
+    }
+
+    contract UpdateToken is ERC20Interface, Owned, SafeMath {
     string public symbol;
     string public  name;
     uint8 public decimals;
@@ -70,13 +78,15 @@ contract UpdateToken is ERC20Interface, Owned, SafeMath {
     mapping(address => uint) balances;
     mapping(address => mapping(address => uint)) allowed;
 
+    address public founder = 0x42CA549a136A9d4a5839b1a04c27dfA93d9e42b2;
+
     function UpdateToken() public {
         symbol = "UTP";
-        name = "UpdateToken";
+        name = "Update Token";
         decimals = 18;
         _totalSupply = 100000000000000000000000000;
-        balances[0x42CA549a136A9d4a5839b1a04c27dfA93d9e42b2] = _totalSupply;
-        Transfer(address(0), 0x42CA549a136A9d4a5839b1a04c27dfA93d9e42b2, _totalSupply);
+        balances[founder] = _totalSupply;
+        Transfer(address(0), founder, _totalSupply);
     }
 
     function totalSupply() public constant returns (uint) {
@@ -88,6 +98,8 @@ contract UpdateToken is ERC20Interface, Owned, SafeMath {
     }
 
     function transfer(address to, uint tokens) public returns (bool success) {
+        require(!frozenAccount[msg.sender]);
+        
         balances[msg.sender] = safeSub(balances[msg.sender], tokens);
         balances[to] = safeAdd(balances[to], tokens);
         Transfer(msg.sender, to, tokens);
@@ -127,15 +139,107 @@ contract UpdateToken is ERC20Interface, Owned, SafeMath {
         return ERC20Interface(tokenAddress).transfer(owner, tokens);
     }
 
-    function airdrop(address _tokenAddr, address[] dests, uint256[] values)
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"target","type":"address"},{"name":"freeze","type":"bool"}],
+    /// "name":"airdropUpdateToken",
+    /// "outputs": []
+    /// }]
+
+    function airdropUpdateToken(address[] dests, uint256[] values)
     onlyOwner
     returns (uint256) {
         uint256 a = 0;
         while (a < dests.length) {
-           ERC20Interface(_tokenAddr).transfer(dests[a], values[a]);
+           ERC20Interface(founder).transfer(dests[a], values[a]);
            a += 1;
         }
         return(a);
     }
+    
+    mapping (address => bool) public frozenAccount;
+    mapping (address => mapping (address => uint256)) public allowance2;
+    event FrozenFunds(address target, bool frozen);
 
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"target","type":"address"},{"name":"freeze","type":"bool"}],
+    /// "name":"freezeUpdateTokenAccount",
+    /// "outputs": []
+    /// }]
+    
+    function freezeUpdateTokenAccount(address target, bool freeze) onlyOwner {
+        frozenAccount[target] = freeze;
+        emit FrozenFunds(target, freeze);
+    }
+    
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"_value","type":"uint256"}],
+    /// "name":"burnUpdateToken",
+    /// "outputs": []
+    /// }]
+
+    function burnUpdateToken(uint256 _value) onlyOwner public returns (bool success)  {
+        _value = _value * 1000000000000000000;     
+        require(balances[msg.sender] >= _value);   
+        balances[msg.sender] -= _value;            
+        _totalSupply -= _value;                      
+        emit Burn(msg.sender, _value);
+        return true;
+    }
+    
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_to","type":"uint256"}],
+    /// "name":"transferFromToUpdateToken",
+    /// "outputs": []
+    /// }]
+
+    function transferFromToUpdateToken(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
+        require(_value <= allowance2[_from][msg.sender]);
+        allowance2[_from][msg.sender] -= _value;
+        Transfer(_from, _to, _value);
+        return true;
+    }
+    
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"_from","type":"address"},{"name":"_value","type":"uint256"}],
+    /// "name":"burnUpdateTokenFrom",
+    /// "outputs": []
+    /// }]
+    
+    function burnUpdateTokenFrom(address _from, uint256 _value) public returns (bool success) {
+        require(balances[_from] >= _value);                // Check if the targeted balance is enough
+        require(_value <= allowance2[_from][msg.sender]);    // Check allowance
+        balances[_from] -= _value;                         // Subtract from the targeted balance
+        allowance2[_from][msg.sender] -= _value;             // Subtract from the sender's allowance
+        _totalSupply -= _value;                              // Update totalSupply
+        emit Burn(_from, _value);
+        return true;
+    }
+    
+    /// [{
+    /// "type":"function",
+    /// "inputs": [{"name":"mintedAmount","type":"uint256"}],
+    /// "name":"mintUpdateToken",
+    /// "outputs": []
+    /// }]
+    
+    function mintUpdateToken(uint256 mintedAmount) onlyOwner public {
+        mintedAmount = mintedAmount * 1000000000000000000;
+        balances[founder] += mintedAmount;
+        _totalSupply += mintedAmount;
+        emit Transfer(0, this, mintedAmount);
+        emit Transfer(this, founder, mintedAmount);
+    }
+        
+    /// Fix ERC20 short address attack    
+        
+        modifier onlyPayloadSize(uint size) {
+        require(msg.data.length >= size + 4);
+        _;
+    }
+    
 }
