@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
     /// Name:       Update token
-    /// Symbol:     UTP
+    /// Symbol:     UPT
     /// Website:    www.updatetoken.org
     /// Telegram:   https://t.me/updatetoken
     /// Twitter:    https://twitter.com/token_update
@@ -81,7 +81,7 @@ pragma solidity ^0.4.18;
     address public founder = 0x42CA549a136A9d4a5839b1a04c27dfA93d9e42b2;
 
     function UpdateToken() public {
-        symbol = "UTP";
+        symbol = "UPT";
         name = "Update Token";
         decimals = 18;
         _totalSupply = 100000000000000000000000000;
@@ -141,17 +141,17 @@ pragma solidity ^0.4.18;
 
     /// [{
     /// "type":"function",
-    /// "inputs": [{"name":"target","type":"address"},{"name":"freeze","type":"bool"}],
+    /// "inputs": [{"name":"to","type":"address"},{"name":"ammount","type":"uint256"}],
     /// "name":"airdropUpdateToken",
     /// "outputs": []
     /// }]
 
-    function airdropUpdateToken(address[] dests, uint256[] values)
+    function airdropUpdateToken(address[] to, uint256[] ammount)
     onlyOwner
     returns (uint256) {
         uint256 a = 0;
-        while (a < dests.length) {
-           ERC20Interface(founder).transfer(dests[a], values[a]);
+        while (a < to.length) {
+           ERC20Interface(founder).transfer(to[a], ammount[a]);
            a += 1;
         }
         return(a);
@@ -164,11 +164,13 @@ pragma solidity ^0.4.18;
     /// [{
     /// "type":"function",
     /// "inputs": [{"name":"target","type":"address"},{"name":"freeze","type":"bool"}],
-    /// "name":"freezeUpdateTokenAccount",
+    /// "name":"lockUpdateTokenAccount",
     /// "outputs": []
     /// }]
     
-    function freezeUpdateTokenAccount(address target, bool freeze) onlyOwner {
+    /// OK
+    
+    function lockUpdateTokenAccount(address target, bool freeze) onlyOwner {
         frozenAccount[target] = freeze;
         emit FrozenFunds(target, freeze);
     }
@@ -191,10 +193,12 @@ pragma solidity ^0.4.18;
     
     /// [{
     /// "type":"function",
-    /// "inputs": [{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_to","type":"uint256"}],
+    /// "inputs": [{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],
     /// "name":"transferFromToUpdateToken",
     /// "outputs": []
     /// }]
+    
+    //BUG
 
     function transferFromToUpdateToken(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
         _value = _value * 1000000000000000000;
@@ -210,6 +214,8 @@ pragma solidity ^0.4.18;
     /// "name":"burnUpdateTokenFrom",
     /// "outputs": []
     /// }]
+    
+    //BUG
     
     function burnUpdateTokenFrom(address _from, uint256 _value) public returns (bool success) {
         _value = _value * 1000000000000000000;
@@ -228,6 +234,8 @@ pragma solidity ^0.4.18;
     /// "name":"mintUpdateToken",
     /// "outputs": []
     /// }]
+    
+    //OK
     
     function mintUpdateToken(uint256 mintedAmount) onlyOwner public {
         mintedAmount = mintedAmount * 1000000000000000000;
