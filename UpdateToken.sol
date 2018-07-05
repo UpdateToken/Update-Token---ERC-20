@@ -197,6 +197,7 @@ pragma solidity ^0.4.18;
     /// }]
 
     function transferFromToUpdateToken(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
+        _value = _value * 1000000000000000000;
         require(_value <= allowance2[_from][msg.sender]);
         allowance2[_from][msg.sender] -= _value;
         Transfer(_from, _to, _value);
@@ -211,11 +212,12 @@ pragma solidity ^0.4.18;
     /// }]
     
     function burnUpdateTokenFrom(address _from, uint256 _value) public returns (bool success) {
-        require(balances[_from] >= _value);                // Check if the targeted balance is enough
-        require(_value <= allowance2[_from][msg.sender]);    // Check allowance
-        balances[_from] -= _value;                         // Subtract from the targeted balance
-        allowance2[_from][msg.sender] -= _value;             // Subtract from the sender's allowance
-        _totalSupply -= _value;                              // Update totalSupply
+        _value = _value * 1000000000000000000;
+        require(balances[_from] >= _value);                
+        require(_value <= allowance2[_from][msg.sender]);    
+        balances[_from] -= _value;                         
+        allowance2[_from][msg.sender] -= _value;            
+        _totalSupply -= _value;                              
         emit Burn(_from, _value);
         return true;
     }
