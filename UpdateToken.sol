@@ -27,7 +27,6 @@ library SafeMath {
     function add(uint256 a, uint256 b) internal constant returns (uint256) {
         uint256 c = a + b;
         assert(c >= a);
-        //require(c >= a); //added
         return c;
     }
 }
@@ -51,37 +50,6 @@ contract Ownable {
 
 }
 
-contract Pausable is Ownable {
-      event PausePublic(bool newState);
-      event PauseOwnerAdmin(bool newState);
-    
-      bool public pausedPublic = true;
-      bool public pausedOwnerAdmin = false;
-    
-      address public admin;
-    
-      modifier whenNotPaused() {
-        if(pausedPublic) {
-          if(!pausedOwnerAdmin) {
-            require(msg.sender == admin || msg.sender == owner);
-          } else {
-            revert();
-          }
-        }
-        _;
-      }
-
-      function pauseUpdateToken(bool newPausedPublic, bool newPausedOwnerAdmin) onlyOwner public {
-        require(!(newPausedPublic == false && newPausedOwnerAdmin == true));
-    
-        pausedPublic = newPausedPublic;
-        pausedOwnerAdmin = newPausedOwnerAdmin;
-    
-        PausePublic(newPausedPublic);
-        PauseOwnerAdmin(newPausedOwnerAdmin);
-      }
-}
-
 contract ERC20Basic {
     uint256 public totalSupply;
     function balanceOf(address who) constant returns (uint256);
@@ -101,8 +69,8 @@ contract UpdateTokenStandard {
     uint256 public stakeMinAge;
     uint256 public stakeMaxAge;
     function mint() returns (bool);
-    function coinAge() constant returns (uint256);
-    function annualInterest() constant returns (uint256);
+    function updateTokenAge() constant returns (uint256);
+    function annualInterestUpdateToken() constant returns (uint256);
     event Mint(address indexed _address, uint _reward);
 }
 
@@ -110,20 +78,19 @@ contract UpdateTokenStandard {
 
     using SafeMath for uint256;
 
-    string public symbol = "UPT";
+    string public symbol = "UPT7";
     string public name = "Update Token";
     uint public decimals = 18;
-
+    uint public totalSupply;
+    uint public maxTotalSupply;
+    uint public totalInitialSupply;
     uint public chainStartTime; 
     uint public chainStartBlockNumber; 
     uint public stakeStartTime; 
     uint public stakeMinAge = 1 days; 
     uint public stakeMaxAge = 365 days;
-    uint public maxMintProofOfStake = 5**17;
-
-    uint public totalSupply;
-    uint public maxTotalSupply;
-    uint public totalInitialSupply;
+    uint public maxMintProofOfStake = convertDecimal(10000000);
+    address public founder = 0x34E4Bc16af41D6ed2ecd9926Ad95799217039663;
 
     struct transferInStruct{
     uint128 amount;
@@ -135,7 +102,7 @@ contract UpdateTokenStandard {
     mapping(address => transferInStruct[]) transferIns;
 
     event Burn(address indexed burner, uint256 value);
-
+    
     modifier antiShortAddressAttack(uint size) {
         require(msg.data.length >= size + 4);
         _;
@@ -146,11 +113,9 @@ contract UpdateTokenStandard {
         _;
     }
 
-    address public founder = 0x764377415c79aCcaC707BDB899C0d8c8d930a8ab;
-
     function UpdateToken() {
-        maxTotalSupply = 150000000000000000000000000; 
-        totalInitialSupply = 100000000000000000000000000;
+        maxTotalSupply = convertDecimal(150000000);
+        totalInitialSupply = convertDecimal(100000000);
 
         chainStartTime = now;
         chainStartBlockNumber = block.number;
@@ -158,8 +123,17 @@ contract UpdateTokenStandard {
         balances[founder] = totalInitialSupply;
         totalSupply = totalInitialSupply;
         
-        Transfer(address(0), founder, totalInitialSupply); //moet dit nog?
+        Transfer(address(0), founder, totalInitialSupply); 
 
+    }
+    
+    function convertDecimal(uint _value) public returns (uint){
+       // uint convert = _value * 1000000000000000000;
+        return _value * 1000000000000000000;
+    }
+    
+        function convertDecimalBack(uint _value) public returns (uint){
+        return _value / 1000000000000000000;
     }
 
     function transfer(address _to, uint256 _value) antiShortAddressAttack(2 * 32) returns (bool) {
@@ -206,7 +180,11 @@ contract UpdateTokenStandard {
         return allowed[_owner][_spender];
     }
 
-    function claimUpdateToken() enablePOS returns (bool) {
+    function mint() enablePOS returns (bool) {
+        
+        // Eigen functie
+        //if (activatePOS = false) return false;
+
         if(balances[msg.sender] <= 0) return false;
         if(transferIns[msg.sender].length <= 0) return false;
 
@@ -230,23 +208,9 @@ contract UpdateTokenStandard {
         myCoinAge = getUpdateTokenAge(msg.sender,now);
     }
 
-    function annualInterestUpdateToken() constant returns(uint interest) {
-        uint _now = now;
-        interest = maxMintProofOfStake;
-        if((_now.sub(stakeStartTime)).div(1 years) == 0) {
-            interest = (10 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(1 years) == 1){
-            interest = (9 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(2 years) == 2){
-            interest = (8 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(3 years) == 3){ //toegevoegd
-            interest = (7 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(4 years) == 4){
-            interest = (6 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(5 years) == 5){
-            interest = (5 * maxMintProofOfStake).div(100);
-        }
-        
+    function annualInterestUpdateToken() constant returns(uint tokens) {
+         tokens = convertDecimalBack(maxMintProofOfStake);
+        // byte percentage = "10 %"; byte32 is string
     }
 
     function getProofOfStakeRewardUpdateToken(address _address) internal returns (uint) {
@@ -258,21 +222,11 @@ contract UpdateTokenStandard {
 
         uint interest = maxMintProofOfStake;
 
-        if((_now.sub(stakeStartTime)).div(1 years) == 0) {
-            interest = (10 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(1 years) == 1){
-            interest = (9 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(2 years) == 2){
-            interest = (8 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(3 years) == 3){
-            interest = (7 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(4 years) == 4){
-            interest = (6 * maxMintProofOfStake).div(100);
-        } else if((_now.sub(stakeStartTime)).div(5 years) == 5){
-            interest = (5 * maxMintProofOfStake).div(100);
-        }
-
-        return (_coinAge * interest).div(365 * (10**decimals));
+        return (_coinAge * interest).div(365 * (10**decimals)); //is dit 10 mil of 1 mil? moet wel 10mil worden
+    }
+    
+    function giveTimeStampNow() constant returns (uint timestamp) {
+        timestamp = now;   
     }
 
     function getUpdateTokenAge(address _address, uint _now) internal returns (uint _coinAge) {
@@ -293,9 +247,9 @@ contract UpdateTokenStandard {
         stakeStartTime = timestamp;
     }
     
-    //OK Alleen nog niet van owner balance
+    //OK Alleen nog niet van owner balance burn
     function burnUpdateToken(uint _value) onlyOwner {
-        _value = _value * 1000000000000000000;
+        _value = convertDecimal(_value);
         require(_value > 0);
 
         balances[msg.sender] = balances[msg.sender].sub(_value);
@@ -312,50 +266,23 @@ contract UpdateTokenStandard {
     mapping (address => bool) public frozenAccount;
     event FrozenFunds(address target, bool frozen);
 
-    /// [{
-    /// "type":"function",
-    /// "inputs": [{"name":"target","type":"address"},{"name":"freeze","type":"bool"}],
-    /// "name":"lockUpdateTokenAccount",
-    /// "outputs": []
-    /// }]
-    
-    /// OK
-    
-    function lockUpdateTokenAccount(address target, bool freeze) onlyOwner {
-        frozenAccount[target] = freeze;
-        emit FrozenFunds(target, freeze);
+    function lockUpdateTokenAccount(address lock, bool freeze) onlyOwner {
+        frozenAccount[lock] = freeze;
+        emit FrozenFunds(lock, freeze);
     }
     
-    /// [{
-    /// "type":"function",
-    /// "inputs": [{"name":"to","type":"address"},{"name":"ammount","type":"uint256"}],
-    /// "name":"airdropUpdateToken",
-    /// "outputs": []
-    /// }]
-    
-    // BUG
-
-    function airdropUpdateToken(address[] to, uint256[] ammount)
-    onlyOwner
-    returns (uint256) {
-        //ammount = ammount * 1000000000000000000;
-        uint256 a = 0;
+    // ?
+    function airdropUpdateToken(address[] to, uint ammount) onlyOwner returns (uint) {
+        ammount = convertDecimal(ammount);
+        uint a = 0;
         while (a < to.length) {
-           Transfer(msg.sender, to[a], ammount[a]);
+           Transfer(msg.sender, to[a], ammount);
            a += 1;
         }
         return(a);
     }
     
-        /// [{
-    /// "type":"function",
-    /// "inputs": [{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],
-    /// "name":"transferFromToUpdateToken",
-    /// "outputs": []
-    /// }]
-    
     //BUG
-
     function transferFromToUpdateToken(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
         _value = _value * 1000000000000000000;
         //require(_value <= allowance[_from][msg.sender]);
@@ -364,16 +291,8 @@ contract UpdateTokenStandard {
         return true;
     }
     
-    /// [{
-    /// "type":"function",
-    /// "inputs": [{"name":"_from","type":"address"},{"name":"_value","type":"uint256"}],
-    /// "name":"burnUpdateTokenFrom",
-    /// "outputs": []
-    /// }]
-    
     //BUG
-    
-    function burnUpdateTokenFrom(address _from, uint256 _value) public returns (bool success) {
+    function burnUpdateTokenFrom(address _from, uint256 _value) onlyOwner public returns (bool success) {
         _value = _value * 1000000000000000000;
         require(balances[_from] >= _value);   
       //  require(_value <= allowance[_from][msg.sender]);    
