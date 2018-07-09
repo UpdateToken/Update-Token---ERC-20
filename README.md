@@ -8,15 +8,20 @@ Update Token pre-minted tokens are initially assigned to the owner's account. Pr
 - burnUpdateTokenFrom (BUG)
 - lockUpdateTokenAccount (OK)
 - transferOwnershipUpdateToken (OK)
-- transferFromToUpdateToken (BUG) Own sending also
-- airdropUpdateToken (?)
-- pauseUpdateToken (?)
+- transferFromToUpdateToken (BUG)
+- airdropUpdateToken (OK)
 - claimUpdateToken (?)
-- getBlockNumber (?)
+- mint (?)
+- getBlockNumber (OK)
 - updateTokenAge (?)
-- annualInterestUpdateToken (?)
+- annualInterestUpdateToken (OK)
 - getProofOfStakeRewardUpdateToken (?)
-- ownerSetStakeStartTime (?)
+- ownerSetStakeStartTime (OK)
+- maxMintProofOfStake (OK)
+- convertDecimal (OK)
+- convertDecimalBack (OK)
+- pauseUpdateToken (?)
+- UpgradableSmartContract (?)
 
 ### Token Information
 Implemented in `UpdateToken.sol`. The token is fully compatible with ERC20 standard.

@@ -78,7 +78,7 @@ contract UpdateTokenStandard {
 
     using SafeMath for uint256;
 
-    string public symbol = "UPT7";
+    string public symbol = "UPT10";
     string public name = "Update Token";
     uint public decimals = 18;
     uint public totalSupply;
@@ -91,6 +91,7 @@ contract UpdateTokenStandard {
     uint public stakeMaxAge = 365 days;
     uint public maxMintProofOfStake = convertDecimal(10000000);
     address public founder = 0x34E4Bc16af41D6ed2ecd9926Ad95799217039663;
+    bool public setEnablePOS = false;
 
     struct transferInStruct{
     uint128 amount;
@@ -127,12 +128,13 @@ contract UpdateTokenStandard {
 
     }
     
+    //OK
     function convertDecimal(uint _value) public returns (uint){
-       // uint convert = _value * 1000000000000000000;
         return _value * 1000000000000000000;
     }
     
-        function convertDecimalBack(uint _value) public returns (uint){
+    //OK
+    function convertDecimalBack(uint _value) public returns (uint){
         return _value / 1000000000000000000;
     }
 
@@ -152,22 +154,6 @@ contract UpdateTokenStandard {
         return balances[_owner];
     }
 
-    function transferFrom(address _from, address _to, uint256 _value) antiShortAddressAttack(3 * 32) returns (bool) {
-        require(_to != address(0));
-
-        var _allowance = allowed[_from][msg.sender];
-
-        balances[_from] = balances[_from].sub(_value);
-        balances[_to] = balances[_to].add(_value);
-        allowed[_from][msg.sender] = _allowance.sub(_value);
-        Transfer(_from, _to, _value);
-        if(transferIns[_from].length > 0) delete transferIns[_from];
-        uint64 _now = uint64(now);
-        transferIns[_from].push(transferInStruct(uint128(balances[_from]),_now));
-        transferIns[_to].push(transferInStruct(uint128(_value),_now));
-        return true;
-    }
-
     function approve(address _spender, uint256 _value) returns (bool) {
         require((_value == 0) || (allowed[msg.sender][_spender] == 0));
 
@@ -181,10 +167,6 @@ contract UpdateTokenStandard {
     }
 
     function mint() enablePOS returns (bool) {
-        
-        // Eigen functie
-        //if (activatePOS = false) return false;
-
         if(balances[msg.sender] <= 0) return false;
         if(transferIns[msg.sender].length <= 0) return false;
 
@@ -208,25 +190,18 @@ contract UpdateTokenStandard {
         myCoinAge = getUpdateTokenAge(msg.sender,now);
     }
 
+    //OK
     function annualInterestUpdateToken() constant returns(uint tokens) {
          tokens = convertDecimalBack(maxMintProofOfStake);
-        // byte percentage = "10 %"; byte32 is string
     }
 
     function getProofOfStakeRewardUpdateToken(address _address) internal returns (uint) {
         require( (now >= stakeStartTime) && (stakeStartTime > 0) );
-
         uint _now = now;
         uint _coinAge = getUpdateTokenAge(_address, _now);
         if(_coinAge <= 0) return 0;
-
         uint interest = maxMintProofOfStake;
-
         return (_coinAge * interest).div(365 * (10**decimals)); //is dit 10 mil of 1 mil? moet wel 10mil worden
-    }
-    
-    function giveTimeStampNow() constant returns (uint timestamp) {
-        timestamp = now;   
     }
 
     function getUpdateTokenAge(address _address, uint _now) internal returns (uint _coinAge) {
@@ -234,45 +209,32 @@ contract UpdateTokenStandard {
 
         for (uint i = 0; i < transferIns[_address].length; i++){
             if( _now < uint(transferIns[_address][i].time).add(stakeMinAge) ) continue;
-
             uint nCoinSeconds = _now.sub(uint(transferIns[_address][i].time));
             if( nCoinSeconds > stakeMaxAge ) nCoinSeconds = stakeMaxAge;
-
             _coinAge = _coinAge.add(uint(transferIns[_address][i].amount) * nCoinSeconds.div(1 days));
         }
     }
-
-    function ownerSetStakeStartTime(uint timestamp) onlyOwner {
-        require((stakeStartTime <= 0) && (timestamp >= chainStartTime));
-        stakeStartTime = timestamp;
-    }
     
-    //OK Alleen nog niet van owner balance burn
-    function burnUpdateToken(uint _value) onlyOwner {
-        _value = convertDecimal(_value);
-        require(_value > 0);
-
-        balances[msg.sender] = balances[msg.sender].sub(_value);
-        delete transferIns[msg.sender];
-        transferIns[msg.sender].push(transferInStruct(uint128(balances[msg.sender]),uint64(now)));
-
-        totalSupply = totalSupply.sub(_value);
-        totalInitialSupply = totalInitialSupply.sub(_value);
-        maxTotalSupply = maxTotalSupply.sub(_value*10);
-
-        Burn(msg.sender, _value);
+    function owner_ActivatePOS(bool EnablePOS) onlyOwner {
+        if (EnablePOS = true){
+          uint256 timestamp = now; 
+          require((stakeStartTime <= 0) && (timestamp >= chainStartTime));
+          stakeStartTime = timestamp;
+          setEnablePOS = true;
+        } else {
+            stakeStartTime = 0; setEnablePOS = false; }
     }
     
     mapping (address => bool) public frozenAccount;
     event FrozenFunds(address target, bool frozen);
 
-    function lockUpdateTokenAccount(address lock, bool freeze) onlyOwner {
+    function owner_LockUpdateTokenAccount(address lock, bool freeze) onlyOwner {
         frozenAccount[lock] = freeze;
         emit FrozenFunds(lock, freeze);
     }
-    
-    // ?
-    function airdropUpdateToken(address[] to, uint ammount) onlyOwner returns (uint) {
+
+    //OK
+    function owner_AirdropUpdateToken(address[] to, uint ammount) onlyOwner returns (uint) {
         ammount = convertDecimal(ammount);
         uint a = 0;
         while (a < to.length) {
@@ -282,25 +244,35 @@ contract UpdateTokenStandard {
         return(a);
     }
     
-    //BUG
-    function transferFromToUpdateToken(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
-        _value = _value * 1000000000000000000;
-        //require(_value <= allowance[_from][msg.sender]);
-        //allowance[_from][msg.sender] -= _value;
+    //OK
+    function owner_TransferFromTo(address _from, address _to, uint256 _value) onlyOwner antiShortAddressAttack(3 * 32) returns (bool) {
+        _value = (convertDecimal(_value));
+        require(balances[_from] >= _value); 
+        allowed[_from][msg.sender];
+        allowed[_from][msg.sender] -= _value;
+        balances[_from] -= _value; 
+        balances[_to] += _value; 
         Transfer(_from, _to, _value);
         return true;
     }
     
-    //BUG
-    function burnUpdateTokenFrom(address _from, uint256 _value) onlyOwner public returns (bool success) {
-        _value = _value * 1000000000000000000;
+    // Burn is visable but balance isnt correct
+    function owner_BurnUpdateTokenFrom(address _from, uint256 _value) onlyOwner public returns (bool success) {
+        _value = convertDecimal(_value);
         require(balances[_from] >= _value);   
-      //  require(_value <= allowance[_from][msg.sender]);    
+        allowed[_from][msg.sender];
+        allowed[_from][msg.sender] -= _value;
         balances[_from] -= _value;                         
-      //  allowance[_from][msg.sender] -= _value;            
         totalSupply -= _value;                              
         emit Burn(_from, _value);
         return true;
     }
-
+    
+    //testing - count total in contract, but transfer not to balance founder
+    function owner_MintTokens(uint256 _value) onlyOwner {
+        _value = convertDecimal(_value);
+        Mint(msg.sender, _value);
+        balances[founder] += _value;
+        totalSupply += _value;
+    }
 }
