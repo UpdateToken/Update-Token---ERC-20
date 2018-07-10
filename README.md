@@ -20,8 +20,9 @@ Update Token pre-minted tokens are initially assigned to the owner's account. Pr
 - maxMintProofOfStake (OK)
 - convertDecimal (OK)
 - convertDecimalBack (OK)
+- distributionUpdateToken
 - pauseUpdateToken (?)
-- UpgradableSmartContract (?)
+- UpgradableSmartContract (OK)
 
 ### Token Information
 Implemented in `UpdateToken.sol`. The token is fully compatible with ERC20 standard.
